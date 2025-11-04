@@ -1,0 +1,28 @@
+.clasp.json
+appsscript.json
+
+# Ignore local configuration files with sensitive data
+config.local.js
+config.js
+*.local.js
+*.local.txt
+secrets.local.txt
+creds.json
+
+# Ignore deployment files (they contain credentials)
+Code.deploy.js
+*.deploy.js
+
+# Ignore other sensitive files
+.env
+.env.local
+secrets.json
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

@@ -1,0 +1,26 @@
+# Ignore Node.js setup scripts (they won't run in Apps Script environment)
+scripts/**
+scripts/
+*.local.js
+*.local.txt
+
+# Ignore configuration templates and docs
+secrets.template.txt
+CONFIG_SETUP.md
+README.md
+
+# Ignore Node.js files
+package.json
+package-lock.json
+node_modules/
+
+# Ignore git and editor files
+.git/
+.gitignore
+.DS_Store
+.vscode/
+
+# Ignore other local files
+*.log
+*.tmp
+temp-*.js
