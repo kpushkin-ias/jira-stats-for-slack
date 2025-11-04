@@ -2,7 +2,7 @@
   "name": "jira-stats-for-slack",
   "version": "1.0.0",
   "description": "JIRA statistics dashboard for Google Sheets using Google Apps Script",
-  "main": "main.js",
+  "main": "src/main.js",
   "scripts": {
     "setup": "./scripts/setup-config.sh",
     "setup-debug": "DEBUG=1 ./scripts/setup-config.sh",
