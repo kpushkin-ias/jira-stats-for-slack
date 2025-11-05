@@ -40,6 +40,10 @@ var HIGHLIGHT_FONT_COLOR = '#000000';       // Black text
 var NORMAL_BACKGROUND_COLOR = '#FFFFFF';    // White background
 var NORMAL_FONT_COLOR = '#000000';          // Black text
 
+// === Stale Tickets Configuration ===
+var STALE_TICKET_HIGHLIGHT_DAYS = 30;      // Highlight tickets past due more than this many days
+var STALE_TICKET_HIGHLIGHT_COLOR = '#FFFF00'; // Yellow background for very overdue tickets (consistent with OpsTickets)
+
 /**
  * Main function to update all Jira ticket statistics
  */
@@ -134,6 +138,7 @@ function updateJiraStats() {
       
       staleSheet.clear();
       staleSheet.appendRow(['🚨 Team Members - Tickets Past Due Date']);
+      staleSheet.appendRow(['🎨 Tickets highlighted in yellow are overdue more than ' + STALE_TICKET_HIGHLIGHT_DAYS + ' days']);
       staleSheet.appendRow(['']);
       staleSheet.appendRow(['Ticket Key', 'Summary', 'Creator', 'Assignee', 'Status', 'Priority', 'Created', 'Due Date', 'Last Updated', 'Days Past Due']);
       
@@ -160,6 +165,17 @@ function updateJiraStats() {
           ticket.lastUpdated,
           ticket.daysPastDue
         ]);
+      });
+      
+      // Highlight tickets that are overdue more than the configured number of days
+      var dataStartRow = staleHeaderRowNum + 1;
+      staleTickets.forEach(function(ticket, index) {
+        if (ticket.daysPastDue > STALE_TICKET_HIGHLIGHT_DAYS) {
+          var rowNum = dataStartRow + index;
+          var rowRange = staleSheet.getRange(rowNum, 1, 1, 10); // All 10 columns
+          rowRange.setBackground(STALE_TICKET_HIGHLIGHT_COLOR);
+          rowRange.setFontColor(HIGHLIGHT_FONT_COLOR);
+        }
       });
       
       // Auto-resize all columns to fit their content
