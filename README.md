@@ -242,7 +242,3 @@ Proprietary - See package.json for details
 - During deployment, credentials are embedded into the deployed code in a temporary `dist/` folder
 - The `dist/` folder is automatically ignored by git and can be cleaned up after deployment
 - Source code in `src/` contains only placeholders, keeping credentials separate from source control
-
-## 📚 Reference
-
-Based on: https://hackernoon.com/writing-google-apps-script-code-locally-in-vscode

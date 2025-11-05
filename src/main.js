@@ -32,19 +32,7 @@ var TEAM_MEMBERS = [
 var ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 // === Configuration Management ===
-// Validate credentials on first use
-function validateCredentials() {
-  if (!JIRA_DOMAIN || !EMAIL || !API_TOKEN || 
-      JIRA_DOMAIN.includes('{{') || EMAIL.includes('{{') || API_TOKEN.includes('{{')) {
-    throw new Error('JIRA configuration not found or contains placeholders. Please deploy with valid credentials.');
-  }
-}
-
-// === Highlighting Configuration ===
-var HIGHLIGHT_ZERO_COLUMNS = [
-  'Cross-Overdue',     // Individual zero check
-  'Cross-Actioned'     // Individual zero check - no cross-assigned tickets actioned
-]; // Rows will be highlighted if ANY of these columns have zero values
+// Credentials are embedded during deployment
 
 // === Highlighting Colors ===
 var HIGHLIGHT_BACKGROUND_COLOR = '#FFFF00'; // Yellow background
@@ -112,15 +100,7 @@ function updateJiraStats() {
       var dueSoon = dueDateStats.dueSoon[user] || 0;
       var total = created + crossActioned;
       
-      // Create JQL queries for each metric (consistent assignee perspective)
-      var createdJql = 'project IN (SYS, CRE, KUBE) AND creator = "' + user + '" AND created >= -1w';
-      var selfAssignedJql = 'project IN (SYS, CRE, KUBE) AND assignee = "' + user + '" AND creator = "' + user + '" AND created >= -1w';
-      var crossAssignedJql = 'project IN (SYS, CRE, KUBE) AND assignee = "' + user + '" AND creator != "' + user + '" AND created >= -1w';
-      var crossActionedJql = 'project IN (SYS, CRE, KUBE) AND assignee = "' + user + '" AND creator != "' + user + '" AND ((resolutiondate >= -1w AND status IN (Closed, Completed) AND resolution IN (Done, Fixed, "P&D Done")) OR updated >= -1w)';
-      var overdueJql = 'project IN (SYS, CRE, KUBE) AND assignee = "' + user + '" AND status NOT IN (Closed, Completed, Done, Resolved) AND duedate IS NOT EMPTY AND duedate <= now()';
-      var dueSoonJql = 'project IN (SYS, CRE, KUBE) AND assignee = "' + user + '" AND status NOT IN (Closed, Completed, Done, Resolved) AND duedate IS NOT EMPTY AND duedate > now() AND duedate <= 7d';
-      
-      // Add row with numbers instead of hyperlinks
+      // Add row with numbers
       sheet.appendRow([user, created, selfAssigned, crossAssigned, crossActioned, overdue, dueSoon, total]);
       
       // Add comments to cells with ticket details
@@ -164,7 +144,6 @@ function updateJiraStats() {
       
       staleTickets.forEach(function(ticket, index) {
         // Create hyperlink formula for the ticket key
-        validateCredentials();
         var ticketUrl = 'https://' + JIRA_DOMAIN + '/browse/' + ticket.key;
         var ticketKeyFormula = '=HYPERLINK("' + ticketUrl + '","' + ticket.key + '")';
         
@@ -196,14 +175,6 @@ function updateJiraStats() {
   } catch (error) {
     Logger.log('Error updating statistics: ' + error.toString());
   }
-}
-
-/**
- * Helper function to create JIRA search URL with JQL
- */
-function createJiraSearchUrl(jql) {
-  validateCredentials();
-  return 'https://' + JIRA_DOMAIN + '/issues/?jql=' + encodeURIComponent(jql);
 }
 
 /**
@@ -241,7 +212,6 @@ function addTicketCommentToCell(sheet, row, column, tickets, categoryName) {
  * Helper function to make JIRA API requests
  */
 function makeJiraRequest(jql) {
-  validateCredentials();
   var encoded_jql = encodeURIComponent(jql);
   var url = 'https://' + JIRA_DOMAIN + '/rest/api/2/search/jql?jql=' + encoded_jql + '&fields=*all&maxResults=1000';
 
@@ -528,61 +498,4 @@ function highlightZeroValueRowsWithStats(sheet, stats, dueDateStats) {
   });
 }
 
-/**
- * Highlight rows in OpsTickets sheet where specified columns have zero values (legacy version)
- */
-function highlightZeroValueRows(sheet) {
-  // Find the header row (contains 'Team Member')
-  var allData = sheet.getDataRange().getValues();
-  var headerRowIndex = -1;
-  
-  for (var i = 0; i < allData.length; i++) {
-    if (allData[i][0] === 'Team Member') {
-      headerRowIndex = i;
-      break;
-    }
-  }
-  
-  if (headerRowIndex === -1) {
-    Logger.log('Header row not found');
-    return;
-  }
-  
-  var headerRow = allData[headerRowIndex];
-  var dataStartRow = headerRowIndex + 2; // +1 for header, +1 for 1-based indexing
-  var dataRange = sheet.getRange(dataStartRow, 1, sheet.getLastRow() - headerRowIndex - 1, sheet.getLastColumn());
-  var data = dataRange.getValues();
-  
-  // Find column indexes for individual zero checks
-  var columnsToCheck = [];
-  HIGHLIGHT_ZERO_COLUMNS.forEach(function(columnName) {
-    var columnIndex = headerRow.indexOf(columnName);
-    if (columnIndex !== -1) {
-      columnsToCheck.push(columnIndex);
-    }
-  });
-  
-  // Check each data row for zero values
-  for (var i = 0; i < data.length; i++) {
-    var shouldHighlight = false;
-    
-    // Check individual columns for zero values
-    for (var j = 0; j < columnsToCheck.length; j++) {
-      var columnIndex = columnsToCheck[j];
-      if (data[i][columnIndex] === 0) {
-        shouldHighlight = true;
-        break;
-      }
-    }
-    
-    // Apply highlighting based on results
-    var rowRange = sheet.getRange(dataStartRow + i, 1, 1, sheet.getLastColumn());
-    if (shouldHighlight) {
-      rowRange.setBackground(HIGHLIGHT_BACKGROUND_COLOR);
-      rowRange.setFontColor(HIGHLIGHT_FONT_COLOR);
-    } else {
-      rowRange.setBackground(NORMAL_BACKGROUND_COLOR);
-      rowRange.setFontColor(NORMAL_FONT_COLOR);
-    }
-  }
-}
+

@@ -42,10 +42,14 @@ if [[ ! -f "$SECRETS_FILE" ]]; then
     exit 1
 fi
 
-# Create dist directory
-echo "Creating dist directory..."
-rm -rf "$DIST_DIR"
+# Create dist directory and clean contents except configuration files
+echo "Preparing dist directory..."
 mkdir -p "$DIST_DIR"
+
+# Remove all files except .clasp.json and appsscript.json
+if [[ -d "$DIST_DIR" ]]; then
+    find "$DIST_DIR" -type f ! -name '.clasp.json' ! -name 'appsscript.json' -delete
+fi
 
 # Read secrets and process main.js
 echo "Reading secrets from $SECRETS_FILE..."
