@@ -1,6 +1,8 @@
 // === JIRA Configuration ===
-// Configuration is stored securely in Google Apps Script Properties Service
-// Use setJiraConfig() function to set credentials, or run npm setup script locally
+// Credential placeholders - will be replaced during deployment
+var JIRA_DOMAIN = '{{JIRA_DOMAIN}}';
+var EMAIL = '{{EMAIL}}';
+var API_TOKEN = '{{API_TOKEN}}';
 
 // === Team Members Filter ===
 var TEAM_MEMBERS = [
@@ -30,37 +32,12 @@ var TEAM_MEMBERS = [
 var ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 // === Configuration Management ===
-/**
- * Get JIRA configuration from PropertiesService (secure storage)
- */
-function getJiraConfig() {
-  var properties = PropertiesService.getScriptProperties();
-  var config = {
-    JIRA_DOMAIN: properties.getProperty('JIRA_DOMAIN'),
-    EMAIL: properties.getProperty('JIRA_EMAIL'),
-    API_TOKEN: properties.getProperty('JIRA_API_TOKEN')
-  };
-  
-  // Validate that all required properties are set
-  if (!config.JIRA_DOMAIN || !config.EMAIL || !config.API_TOKEN) {
-    throw new Error('JIRA configuration not found. Please run setJiraConfig() or npm run setup first.');
+// Validate credentials on first use
+function validateCredentials() {
+  if (!JIRA_DOMAIN || !EMAIL || !API_TOKEN || 
+      JIRA_DOMAIN.includes('{{') || EMAIL.includes('{{') || API_TOKEN.includes('{{')) {
+    throw new Error('JIRA configuration not found or contains placeholders. Please deploy with valid credentials.');
   }
-  
-  return config;
-}
-
-/**
- * Set JIRA configuration in PropertiesService (secure storage)
- * This function can be called from the Apps Script editor or from a deployment script
- */
-function setJiraConfig(domain, email, apiToken) {
-  var properties = PropertiesService.getScriptProperties();
-  properties.setProperties({
-    'JIRA_DOMAIN': domain,
-    'JIRA_EMAIL': email,
-    'JIRA_API_TOKEN': apiToken
-  });
-  Logger.log('JIRA configuration saved securely to PropertiesService');
 }
 
 // === Highlighting Configuration ===
@@ -187,8 +164,8 @@ function updateJiraStats() {
       
       staleTickets.forEach(function(ticket, index) {
         // Create hyperlink formula for the ticket key
-        var config = getJiraConfig();
-        var ticketUrl = 'https://' + config.JIRA_DOMAIN + '/browse/' + ticket.key;
+        validateCredentials();
+        var ticketUrl = 'https://' + JIRA_DOMAIN + '/browse/' + ticket.key;
         var ticketKeyFormula = '=HYPERLINK("' + ticketUrl + '","' + ticket.key + '")';
         
         // Add the row data with hyperlink formula in first column
@@ -225,8 +202,8 @@ function updateJiraStats() {
  * Helper function to create JIRA search URL with JQL
  */
 function createJiraSearchUrl(jql) {
-  var config = getJiraConfig();
-  return 'https://' + config.JIRA_DOMAIN + '/issues/?jql=' + encodeURIComponent(jql);
+  validateCredentials();
+  return 'https://' + JIRA_DOMAIN + '/issues/?jql=' + encodeURIComponent(jql);
 }
 
 /**
@@ -264,12 +241,12 @@ function addTicketCommentToCell(sheet, row, column, tickets, categoryName) {
  * Helper function to make JIRA API requests
  */
 function makeJiraRequest(jql) {
-  var config = getJiraConfig();
+  validateCredentials();
   var encoded_jql = encodeURIComponent(jql);
-  var url = 'https://' + config.JIRA_DOMAIN + '/rest/api/2/search/jql?jql=' + encoded_jql + '&fields=*all&maxResults=1000';
+  var url = 'https://' + JIRA_DOMAIN + '/rest/api/2/search/jql?jql=' + encoded_jql + '&fields=*all&maxResults=1000';
 
   var headers = {
-    'Authorization': 'Basic ' + Utilities.base64Encode(config.EMAIL + ':' + config.API_TOKEN),
+    'Authorization': 'Basic ' + Utilities.base64Encode(EMAIL + ':' + API_TOKEN),
     'Accept': 'application/json'
   };
 

@@ -1,0 +1,6 @@
+# === SOURCE PROTECTION ===
+# This prevents deployment of source files with placeholders
+# Source files should never be deployed directly to production
+
+# Block all files - source is for development only
+**

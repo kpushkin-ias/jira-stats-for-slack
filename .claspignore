@@ -1,0 +1,24 @@
+# === DEPLOYMENT RESTRICTION ===
+# This .claspignore prevents accidental deployment from project root
+# Only deploy from dist/ folder using the deployment script
+
+# Ignore all source files
+src/**
+
+# Ignore development files
+scripts/**
+secrets.*
+package.json
+package-lock.json
+README.md
+.gitignore
+.git/**
+
+# Ignore temporary and build files
+node_modules/**
+*.log
+*.tmp
+
+# Ignore configuration files
+.env*
+.DS_Store

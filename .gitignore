@@ -1,14 +1,17 @@
-# Ignore clasp credentials file
+# Ignore clasp sensitive files
 .clasp.json
+appsscript.json
 
 # Ignore local configuration files with sensitive data
 *.local.js
 *.local.txt
 
+# Ignore temporary dist folder
+dist/
+
 # Ignore other sensitive files
 .env
 .env.local
-secrets.json
 
 # OS generated files
 .DS_Store

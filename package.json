@@ -4,14 +4,10 @@
   "description": "JIRA statistics dashboard for Google Sheets using Google Apps Script",
   "main": "src/main.js",
   "scripts": {
-    "setup": "./scripts/setup-config.sh",
-    "setup-debug": "DEBUG=1 ./scripts/setup-config.sh",
-    "deploy": "clasp push",
-    "run": "clasp run updateJiraStats",
-    "logs": "clasp logs",
-    "open": "clasp open",
-    "setup-and-deploy": "npm run setup && npm run deploy",
-    "dev": "npm run setup-and-deploy && npm run run"
+    "deploy": "./scripts/deploy.sh",
+    "logs": "clasp -P dist/ logs",
+    "open": "clasp -P dist/ open",
+    "clean": "rm -rf dist"
   },
   "keywords": [
     "jira",
@@ -20,8 +16,8 @@
     "dashboard",
     "statistics"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "Kiril Pushkin",
+  "license": "Proprietary",
   "dependencies": {},
   "devDependencies": {}
 }

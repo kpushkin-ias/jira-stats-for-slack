@@ -6,20 +6,33 @@ A comprehensive JIRA statistics dashboard for Google Sheets using Google Apps Sc
 
 ```
 ├── src/                    # Apps Script source code
-│   ├── main.js            # Main dashboard functionality  
-│   ├── appsscript.json    # Apps Script manifest
-│   └── README.md          # Source code documentation
-├── scripts/               # Setup and deployment scripts
-│   ├── setup-config.sh    # Shell setup script
-│   └── setup-config.js    # Node.js setup script
+│   ├── main.js            # Main dashboard functionality (with placeholders)
+│   └── appsscript.json    # Apps Script manifest
+├── scripts/               # Deployment scripts
+│   └── deploy.sh          # Deployment script that processes credentials
+├── dist/                  # Temporary deployment folder (auto-generated, not in git)
+│   ├── main.js            # Processed main.js with embedded credentials
+│   └── appsscript.json    # Copied manifest
 ├── secrets.template.txt   # Credentials template
 ├── package.json          # NPM configuration
-├── .clasp.json           # Clasp configuration (points to src/)
-├── .claspignore          # Files to exclude from deployment
 └── README.md             # This file
 ```
 
-## 🚀 Quick Start
+## � Prerequisites
+
+1. **Install Node.js and npm** (if not already installed)
+
+2. **Install Google Apps Script CLI (clasp):**
+   ```bash
+   npm install -g @google/clasp
+   ```
+
+3. **Login to clasp:**
+   ```bash
+   clasp login
+   ```
+
+##  Quick Start
 
 1. **Setup credentials:**
    ```bash
@@ -27,28 +40,28 @@ A comprehensive JIRA statistics dashboard for Google Sheets using Google Apps Sc
    # Edit secrets.local.txt with your JIRA credentials
    ```
 
-2. **Run setup:**
+2. **Deploy:**
    ```bash
-   npm run setup
+   npm run deploy  # Creates dist/, processes credentials, and deploys
    ```
 
-3. **Deploy and run:**
-   ```bash
-   npm run deploy
-   npm run run
-   ```
+3. **Run the function:**
+   - Open the Google Apps Script project (`npm run open`)
+   - Manually run the `updateJiraStats` function from the editor
 
 ## 📦 Available Scripts
 
-- `npm run setup` - Configure JIRA credentials and deploy
-- `npm run deploy` - Deploy src/ to Apps Script
-- `npm run run` - Execute the dashboard update
+- `npm run deploy` - Process credentials and deploy to Apps Script
 - `npm run logs` - View Apps Script logs
 - `npm run open` - Open Apps Script editor
+- `npm run clean` - Remove temporary dist folder
 
 ## 🛡️ Security
 
-Credentials are stored securely in Google Apps Script's PropertiesService, not in the code.
+- Credentials are stored in `secrets.local.txt` (not committed to git)
+- During deployment, credentials are embedded into the deployed code in a temporary `dist/` folder
+- The `dist/` folder is automatically ignored by git and can be cleaned up after deployment
+- Source code in `src/` contains only placeholders, keeping credentials separate from source control
 
 ## 📚 Reference
 
