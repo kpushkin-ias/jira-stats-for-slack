@@ -73,9 +73,9 @@ function updateJiraStats() {
     sheet.appendRow(['']);
     sheet.appendRow(['📝 Field Descriptions:']);
     sheet.appendRow(['• Tickets Created: All tickets created by team member (last week)']);
-    sheet.appendRow(['• Self-Assigned: Tickets assigned to user, created by themselves']);
-    sheet.appendRow(['• Cross-Assigned: Tickets assigned to user, created by others']);
-    sheet.appendRow(['• Cross-Actioned: Cross-assigned tickets closed/updated by this user']);
+    sheet.appendRow(['• Self-Assigned: All currently assigned tickets created by themselves']);
+    sheet.appendRow(['• Cross-Assigned: All currently assigned tickets created by others']);
+    sheet.appendRow(['• Cross-Actioned: Cross-assigned tickets closed/updated by this user (last week)']);
     sheet.appendRow(['• Cross-Overdue: All overdue tickets assigned to this user']);
     sheet.appendRow(['• Cross-Due Soon: All tickets assigned to this user due within 7 days']);
     sheet.appendRow(['• Total Activity: Created + Cross-Actioned']);
@@ -227,7 +227,7 @@ function addTicketCommentToCell(sheet, row, column, tickets, categoryName) {
 /**
  * Helper function to make JIRA API requests
  */
-function makeJiraRequest(jql) {
+function makeJiraRequest(jql, description) {
   var encoded_jql = encodeURIComponent(jql);
   var url = 'https://' + JIRA_DOMAIN + '/rest/api/2/search/jql?jql=' + encoded_jql + '&fields=*all&maxResults=1000';
 
@@ -242,7 +242,12 @@ function makeJiraRequest(jql) {
     'muteHttpExceptions': true
   };
 
-  Logger.log('Searching with JQL: ' + jql);
+  if (description) {
+    Logger.log('Fetching: ' + description);
+    Logger.log('JQL: ' + jql);
+  } else {
+    Logger.log('Searching with JQL: ' + jql);
+  }
   
   var response = UrlFetchApp.fetch(url, options);
   var data = JSON.parse(response.getContentText());
@@ -262,7 +267,7 @@ function makeJiraRequest(jql) {
 function getStaleTickets() {
   // Query for open tickets that are past due date (matches getDueDateStats logic)
   var jql = 'project IN (SYS, CRE, KUBE) AND status NOT IN (Closed, Completed, Done, Resolved) AND duedate IS NOT EMPTY AND duedate <= now()';
-  var issues = makeJiraRequest(jql);
+  var issues = makeJiraRequest(jql, 'All overdue tickets for stale tickets report');
   
   var staleTickets = [];
   
@@ -314,7 +319,7 @@ function getStaleTickets() {
 function getDueDateStats() {
   // Query for all open tickets with due dates
   var jql = 'project IN (SYS, CRE, KUBE) AND status NOT IN (Closed, Completed, Done, Resolved) AND duedate IS NOT EMPTY';
-  var issues = makeJiraRequest(jql);
+  var issues = makeJiraRequest(jql, 'All open tickets with due dates for overdue/due-soon analysis');
   
   var dueDateStats = {
     overdue: {},
@@ -375,15 +380,23 @@ function getDueDateStats() {
  * Get all ticket statistics in one optimized function
  */
 function getAllTicketStats() {
-  // Single query to get all relevant tickets from last week
-  var jql = 'project IN (SYS, CRE, KUBE) AND (created >= -1w OR updated >= -1w OR resolved >= -1w)';
-  var issues = makeJiraRequest(jql);
+  // Query for created tickets from last week
+  var createdJql = 'project IN (SYS, CRE, KUBE) AND created >= -1w';
+  var createdIssues = makeJiraRequest(createdJql, 'Tickets created in last week');
+  
+  // Query for all currently assigned tickets (no time restriction)
+  var assignedJql = 'project IN (SYS, CRE, KUBE) AND status NOT IN (Closed, Completed, Done, Resolved) AND assignee IS NOT EMPTY';
+  var assignedIssues = makeJiraRequest(assignedJql, 'All currently open assigned tickets');
+  
+  // Query for actioned tickets from last week
+  var actionedJql = 'project IN (SYS, CRE, KUBE) AND (updated >= -1w OR resolved >= -1w)';
+  var actionedIssues = makeJiraRequest(actionedJql, 'Tickets updated or resolved in last week');
   
   var stats = {
     created: {},
-    selfAssigned: {},     // Tickets assigned to user, created by user
-    crossAssigned: {},    // Tickets assigned to user, created by others
-    crossActioned: {}     // Cross-assigned tickets closed or updated by user
+    selfAssigned: {},     // Tickets assigned to user, created by user (all time)
+    crossAssigned: {},    // Tickets assigned to user, created by others (all time)
+    crossActioned: {}     // Cross-assigned tickets closed or updated by user (last week)
   };
   
   var ticketDetails = {
@@ -401,7 +414,28 @@ function getAllTicketStats() {
     ticketDetails.crossActioned[user] = [];
   });
   
-  issues.forEach(function(issue) {
+  // Process created tickets (last week only)
+  createdIssues.forEach(function(issue) {
+    var creator = issue.fields.creator ? issue.fields.creator.displayName : 'Unknown';
+    
+    var ticketInfo = {
+      key: issue.key,
+      summary: issue.fields.summary,
+      creator: creator,
+      assignee: issue.fields.assignee ? issue.fields.assignee.displayName : 'Unassigned',
+      status: issue.fields.status.name,
+      priority: issue.fields.priority ? issue.fields.priority.name : 'None'
+    };
+    
+    // Count created tickets (created in last week)
+    if (creator && TEAM_MEMBERS.includes(creator)) {
+      stats.created[creator] = (stats.created[creator] || 0) + 1;
+      ticketDetails.created[creator].push(ticketInfo);
+    }
+  });
+  
+  // Process all currently assigned tickets (no time restriction)
+  assignedIssues.forEach(function(issue) {
     var creator = issue.fields.creator ? issue.fields.creator.displayName : 'Unknown';
     var assignee = issue.fields.assignee ? issue.fields.assignee.displayName : 'Unassigned';
     
@@ -414,26 +448,33 @@ function getAllTicketStats() {
       priority: issue.fields.priority ? issue.fields.priority.name : 'None'
     };
     
-    // Count created tickets (created in last week)
-    if (new Date(issue.fields.created) >= new Date(Date.now() - ONE_WEEK_MS)) {
-      if (creator && TEAM_MEMBERS.includes(creator)) {
-        stats.created[creator] = (stats.created[creator] || 0) + 1;
-        ticketDetails.created[creator].push(ticketInfo);
-      }
-      
-      // Count assigned tickets from assignee perspective (created in last week)
-      if (assignee && TEAM_MEMBERS.includes(assignee)) {
-        if (creator === assignee) {
-          // Self-assigned: assignee = user, creator = user
-          stats.selfAssigned[assignee] = (stats.selfAssigned[assignee] || 0) + 1;
-          ticketDetails.selfAssigned[assignee].push(ticketInfo);
-        } else {
-          // Cross-assigned: assignee = user, creator ≠ user
-          stats.crossAssigned[assignee] = (stats.crossAssigned[assignee] || 0) + 1;
-          ticketDetails.crossAssigned[assignee].push(ticketInfo);
-        }
+    // Count assigned tickets from assignee perspective (all currently assigned)
+    if (assignee && TEAM_MEMBERS.includes(assignee)) {
+      if (creator === assignee) {
+        // Self-assigned: assignee = user, creator = user
+        stats.selfAssigned[assignee] = (stats.selfAssigned[assignee] || 0) + 1;
+        ticketDetails.selfAssigned[assignee].push(ticketInfo);
+      } else {
+        // Cross-assigned: assignee = user, creator ≠ user
+        stats.crossAssigned[assignee] = (stats.crossAssigned[assignee] || 0) + 1;
+        ticketDetails.crossAssigned[assignee].push(ticketInfo);
       }
     }
+  });
+  
+  // Process actioned tickets (last week only)
+  actionedIssues.forEach(function(issue) {
+    var creator = issue.fields.creator ? issue.fields.creator.displayName : 'Unknown';
+    var assignee = issue.fields.assignee ? issue.fields.assignee.displayName : 'Unassigned';
+    
+    var ticketInfo = {
+      key: issue.key,
+      summary: issue.fields.summary,
+      creator: creator,
+      assignee: assignee,
+      status: issue.fields.status.name,
+      priority: issue.fields.priority ? issue.fields.priority.name : 'None'
+    };
     
     // Count cross-assigned tickets that were closed or updated in last week
     if (creator !== assignee && 
